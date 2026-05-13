@@ -1,0 +1,64 @@
+# .gitignore for THE LEAGUE (MERN Stack Project)
+
+# --- Dependency Folders ---
+# Never include node_modules in Git or submission as they are massive 
+# and can be re-installed via 'npm install'
+node_modules/
+jspm_packages/
+
+# --- Environment Secrets ---
+# Crucial: Never share your MongoDB URI, API keys, or JWT secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Build and Distribution ---
+# React build folder (generated on 'npm run build')
+/client/build/
+/dist/
+out/
+
+# --- Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs
+*.log
+
+# --- Editor and OS Specific ---
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+# Windows system files
+Thumbs.db
+desktop.ini
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# --- Testing ---
+/client/coverage/
+.nyc_output
+
+# --- Miscellaneous ---
+# Temporary files and caches
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.node_repl_history
+*.tmp
+*.temp
+
+# Submission specific: Ignore local database exports or large assets
+/server/db_backups/
+*.mp4
+*.mov

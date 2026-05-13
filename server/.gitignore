@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Environment Variables (Crucial for your MongoDB password!)
+.env
+
+# Build folders
+build/
+dist/
+
+# OS generated files
+.DS_Store
+Thumbs.db

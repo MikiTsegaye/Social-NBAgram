@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const postRoutes = require('./routes/postRoutes');
 
@@ -17,6 +18,7 @@ app.use(express.json());
 
 // 2. Routes (Prefixing with /api is standard practice)
 app.use('/api/auth', authRoutes);
+app.use('/api', userRoutes);
 app.use('/api', groupRoutes);
 app.use('/api', postRoutes);
 

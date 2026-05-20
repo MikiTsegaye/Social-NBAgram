@@ -47,18 +47,33 @@
   - sender, receiver, content, isRead, timestamps
   - **Priority**: HIGH - Required for messaging feature
 
-#### 3. Controllers (3/4 Implemented)
-- [x] **authController.js**
-  - register, login basic structure
+#### 3. Controllers (3/3 CRUD Complete ✅)
+- [x] **authController.js** - AUTHENTICATION ONLY ✅
+  - ✅ register (Create)
+  - ✅ login (Read)
   - **TODO**: Password hashing with bcryptjs, JWT token generation
   
-- [x] **groupController.js**
-  - Basic CRUD functions outlined
-  - **TODO**: Full implementation with error handling
+- [x] **userController.js** - USER MANAGEMENT ✅ (NEW)
+  - ✅ getUserById (Read single)
+  - ✅ getAllUsers (Read all)
+  - ✅ updateUser (Update)
+  - ✅ deleteUser (Delete)
+  - ✅ searchUsers (Search by username & team)
+
+- [x] **groupController.js** - FULL CRUD IMPLEMENTED
+  - ✅ createGroup (Create)
+  - ✅ getAllGroups (Read)
+  - ✅ updateGroup (Update)
+  - ✅ deleteGroup (Delete)
+  - ✅ searchGroups (Search)
   
-- [x] **postController.js**
-  - Basic CRUD functions outlined
-  - **TODO**: Full implementation with error handling
+- [x] **postController.js** - FULL CRUD IMPLEMENTED
+  - ✅ createPost (Create)
+  - ✅ getAllPosts (Read)
+  - ✅ updatePost (Update)
+  - ✅ deletePost (Delete)
+  - ✅ toggleLike (Like/Unlike)
+  - ✅ searchPosts (Search by content & team) - ENHANCED
 
 - [ ] **messageController.js** ❌ **MISSING**
   - Required for messaging functionality
@@ -68,26 +83,105 @@
   - User search, profile management
   - **Priority**: HIGH
 
-#### 4. Routes (3/3 Created)
-- [x] **authRoutes.js** - `/api/auth/*`
+#### 4. Routes (4/4 CRUD Complete ✅)
+- [x] **authRoutes.js** - `/api/auth/*` - AUTHENTICATION ONLY ✅
   - POST /register
   - POST /login
   - **TODO**: Add JWT middleware, validate controllers
   
-- [x] **groupRoutes.js** - `/api/groups/*`
-  - CRUD endpoints outlined
-  - **TODO**: Implement all routes, add auth middleware
+- [x] **userRoutes.js** - `/api/*` - USER MANAGEMENT ✅ (NEW)
+  - GET /users (Get all users)
+  - GET /users/search (Search users by username & team)
+  - GET /users/:userId (Get single user)
+  - PUT /users/:userId (Update user)
+  - DELETE /users/:userId (Delete user)
 
-- [x] **postRoutes.js** - `/api/posts/*`
-  - CRUD endpoints outlined
-  - **TODO**: Implement all routes, add auth middleware
+- [x] **groupRoutes.js** - `/api/groups/*` - FULL CRUD IMPLEMENTED ✅
+  - POST /groups (Create)
+  - GET /groups (Read all)
+  - GET /groups/search (Search)
+  - PUT /groups/:id (Update)
+  - DELETE /groups/:id (Delete)
+
+- [x] **postRoutes.js** - `/api/posts/*` - FULL CRUD IMPLEMENTED ✅
+  - POST /posts (Create)
+  - GET /posts (Read all)
+  - GET /posts/search (Search)
+  - POST /posts/:id/like (Like/Unlike)
+  - PUT /posts/:id (Update)
+  - DELETE /posts/:id (Delete)
 
 - [ ] **messageRoutes.js** ❌ **MISSING**
   - **Priority**: HIGH
 
-- [ ] **userRoutes.js** ❌ **MISSING** (partially in authRoutes)
-  - User search, profile update
-  - **Priority**: HIGH
+#### 5. ✅ COMPLETED FEATURES
+
+##### Requirement #10: Server-Side Search Functionality ✅
+- [x] **Post Search** (`/api/posts/search`)
+  - ✅ Search by content keyword (case-insensitive regex)
+  - ✅ Filter by team
+  - ✅ Combined search (content + team)
+  - ✅ Results sorted by newest first
+  - ✅ Returns count of results
+  - Usage: `/api/posts/search?query=basketball&team=Lakers`
+
+- [x] **User Search** (`/api/users/search`) - NEW
+  - ✅ Search by username (case-insensitive regex)
+  - ✅ Filter by team
+  - ✅ Combined search (username + team)
+  - ✅ Password excluded from results
+  - ✅ Results sorted by newest first
+  - ✅ Returns count of results
+  - Usage: `/api/users/search?query=jordan&team=Lakers`
+
+- [x] **Group Search** (`/api/groups/search`)
+  - ✅ Already implemented - search by name
+
+##### ✅ NEW: JSON Format Standardization (Frontend Compatibility)
+- [x] **User Object Standardization**
+  - ✅ Changed `team` → `favoriteTeam` 
+  - ✅ Changed `role` → `isAdmin` (boolean)
+  - ✅ Added `groups` array (tracks group memberships)
+  - ✅ All responses now return: `{ _id, username, favoriteTeam, isAdmin, groups, createdAt }`
+  - ✅ Updated: register, login, getUserById, getAllUsers, updateUser, searchUsers
+
+- [x] **Post Object Standardization**
+  - ✅ Author always populated with: `{ _id, username }`
+  - ✅ All responses now return: `{ _id, content, author, likes, teamTag, createdAt }`
+  - ✅ Updated: createPost, getAllPosts, updatePost, searchPosts
+  - ✅ Password field excluded from all user responses
+
+- [x] **Query Parameter Updates**
+  - ✅ `/api/users/search?query=&favoriteTeam=` (changed from `team`)
+  - ✅ `/api/posts/search?query=&teamTag=` (changed from `team` to match model)
+
+##### ✅ NEW: Access Control Logic
+- [x] **Post Authorization** 
+  - ✅ Users can only DELETE their own posts (or admins)
+  - ✅ Users can only EDIT their own posts (or admins)
+  - ✅ 403 Forbidden response for unauthorized access
+  - Requires `userId` and `userRole` in request body (JWT integration planned)
+
+- [x] **Group Administration** (Group Managers - isAdmin users)
+  - ✅ Only group admin or system admin can UPDATE group
+  - ✅ Only group admin or system admin can DELETE group
+  - ✅ Group join request system with pending requests
+  - ✅ Admin approval of join requests
+  - ✅ Admin rejection of join requests
+  - ✅ Admin can remove members from group
+  - ✅ View pending requests (admin only)
+  - ✅ Populated `pendingRequests` array in Group model
+
+- [x] **Group Management Routes** (NEW)
+  - ✅ `POST /groups/:groupId/request` - User requests to join
+  - ✅ `GET /groups/:groupId/pending-requests` - View requests (admin)
+  - ✅ `POST /groups/:groupId/approve-request` - Approve request (admin)
+  - ✅ `POST /groups/:groupId/reject-request` - Reject request (admin)
+  - ✅ `POST /groups/:groupId/remove-member` - Remove member (admin)
+  - ✅ `PUT /groups/:groupId` - Update group (admin)
+  - ✅ `DELETE /groups/:groupId` - Delete group (admin)
+
+---
 
 #### 5. Middleware
 - [ ] **Authentication Middleware** ❌ **MISSING**

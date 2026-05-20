@@ -4,7 +4,8 @@ const groupSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true }, // e.g., "Lakers"
     description: { type: String },
     admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // The Team Manager
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    pendingRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Users requesting to join
 }, { timestamps: true });
 
 module.exports = mongoose.model('Group', groupSchema);

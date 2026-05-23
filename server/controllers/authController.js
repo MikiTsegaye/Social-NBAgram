@@ -1,9 +1,9 @@
 const User = require('../models/User');
-// Register User
 
+// Register User
 exports.register = async (req, res) => {
     try {
-        const { username, password, team } = req.body;
+        const { username, password, favoriteTeam } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ username });
@@ -12,10 +12,21 @@ exports.register = async (req, res) => {
         }
 
         // Create new user
-        const newUser = new User({ username, password, team });
+        const newUser = new User({ username, password, favoriteTeam });
         await newUser.save();
 
-        res.status(201).json({ message: "User registered successfully" });
+        // Return user object in correct format
+        res.status(201).json({ 
+            message: "User registered successfully",
+            user: {
+                _id: newUser._id,
+                username: newUser.username,
+                favoriteTeam: newUser.favoriteTeam,
+                isAdmin: newUser.isAdmin,
+                groups: newUser.groups,
+                createdAt: newUser.createdAt
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: "Error registering user", error });
     }
@@ -32,14 +43,18 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: "Invalid username or password" });
         }
 
-        res.status(200).json({ message: "Login successful", user:
-            {
-                id: user._id,
+        // Return user object in correct format
+        res.status(200).json({ 
+            message: "Login successful",
+            user: {
+                _id: user._id,
                 username: user.username,
-                team: user.team,
-                role: user.role,
+                favoriteTeam: user.favoriteTeam,
+                isAdmin: user.isAdmin,
+                groups: user.groups,
+                createdAt: user.createdAt
             }
-         });
+        });
     } catch (error) {
         res.status(500).json({ message: "Error logging in", error });
     }

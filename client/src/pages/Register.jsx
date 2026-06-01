@@ -27,7 +27,7 @@ const teams = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Ho
     "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"];
 
 const Register = ({ onSwitchToLogin }) => {
-    const [formData, setFormData] = useState({ username: '', password: '', team: '' });
+    const [formData, setFormData] = useState({ username: '', password: '', favoriteTeam: '' });
     const [status, setStatus] = useState({ msg: '', type: '' });
 
     const handleSubmit = (e) => {
@@ -80,8 +80,8 @@ const Register = ({ onSwitchToLogin }) => {
                             <TextField
                                 //set as a dropdown but show only 5 teams at a time with scroll
                                 select fullWidth label="Draft Team" margin="normal" required
-                                value={formData.team}
-                                onChange={(e) => setFormData({...formData, team: e.target.value})}
+                                value={formData.favoriteTeam}
+                                onChange={(e) => setFormData({...formData, favoriteTeam: e.target.value})}
                                 sx={{ mb: 2 }}
                                 SelectProps={{
                                     MenuProps: {

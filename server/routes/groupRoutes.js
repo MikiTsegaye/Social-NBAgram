@@ -17,6 +17,12 @@ router.post('/groups/:groupId/request', groupController.requestToJoinGroup);
 // Get pending requests for a group (admin only)
 router.get('/groups/:groupId/pending-requests', groupController.getPendingRequests);
 
+// Get group details by ID
+router.get('/groups/:groupId', groupController.getGroupById);
+
+// Get group details by ID
+router.get('/groups/:groupId', groupController.getGroupById);
+
 // Admin: Approve join request
 router.post('/groups/:groupId/approve-request', groupController.approveJoinRequest);
 

@@ -15,6 +15,17 @@ exports.getAllGroups = async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 };
 
+// Get group details by ID
+exports.getGroupById = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const group = await Group.findById(groupId).populate('admin', 'username');
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' }); }
+        res.json(group);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+};
+
 // Requirement: Search
 exports.searchGroups = async (req, res) => {
     try {

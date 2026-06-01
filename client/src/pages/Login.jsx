@@ -28,8 +28,9 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
         
         api.login(formData.username, formData.password)
             .done((response) => {
-                // Save user to local storage (Simple Auth strategy)
+                // Save user and token to local storage
                 localStorage.setItem('user', JSON.stringify(response.user));
+                localStorage.setItem('token', response.token);
                 onLoginSuccess(response.user);
             })
             .fail((err) => {

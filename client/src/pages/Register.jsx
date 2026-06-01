@@ -35,7 +35,11 @@ const Register = ({ onSwitchToLogin }) => {
         api.register(formData)
             .done(() => {
                 setStatus({ msg: "Success! Welcome to the League.", type: "success" });
-                setTimeout(() => onSwitchToLogin(), 2000);
+                setTimeout(() => {
+                    if (typeof onSwitchToLogin === 'function') {
+                        onSwitchToLogin();
+                    }
+                }, 2000);
             })
             .fail((err) => {
                 setStatus({ msg: err.responseJSON?.message || "Registration failed", type: "error" });
@@ -79,7 +83,7 @@ const Register = ({ onSwitchToLogin }) => {
                             />
                             <TextField
                                 //set as a dropdown but show only 5 teams at a time with scroll
-                                select fullWidth label="Draft Team" margin="normal" required
+                                select fullWidth label="Favorite Team" margin="normal" required
                                 value={formData.favoriteTeam}
                                 onChange={(e) => setFormData({...formData, favoriteTeam: e.target.value})}
                                 sx={{ mb: 2 }}
@@ -125,7 +129,7 @@ const Register = ({ onSwitchToLogin }) => {
                         </form>
 
                         <Typography align="center" variant="body2" sx={{ color: '#888' }}>
-                            Already verified? <Link href="#" onClick={onSwitchToLogin} sx={{ color: '#ff1744', textDecoration: 'none', fontWeight: 'bold' }}>Login</Link>
+                            Already verified? <Link href="#" onClick={(e) => { e.preventDefault(); if (typeof onSwitchToLogin === 'function') onSwitchToLogin(); }} sx={{ color: '#ff1744', textDecoration: 'none', fontWeight: 'bold' }}>Login</Link>
                         </Typography>
                     </Paper>
                 </Box>

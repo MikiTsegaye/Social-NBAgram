@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import $ from 'jquery';
+import api from '../../services/api';
 import './PostFeed.css';
-
-const API_URL = 'http://localhost:5000/api';
 
 const PostFeed = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formContent, setFormContent] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
   const [editMode, setEditMode] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [message, setMessage] = useState('');
@@ -28,16 +27,7 @@ const PostFeed = () => {
 
   const fetchFeed = () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
-
-    $.ajax({
-      url: `${API_URL}/posts/feed`,
-      method: 'GET',
-      dataType: 'json',
-      headers: {
-        Authorization: `Bearer ${token || ''}`,
-      },
-    })
+    api.getFeed()
       .done((data) => {
         setPosts(Array.isArray(data) ? data : data.posts || []);
       })
@@ -61,30 +51,27 @@ const PostFeed = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    const payload = {
-      content: formContent.trim(),
-      teamTag: currentUser.favoriteTeam || '',
-    };
+    if (!currentUserId) {
+      setError('You must be logged in to create a post.');
+      return;
+    }
 
-    $.ajax({
-      url: `${API_URL}/posts`,
-      method: 'POST',
-      contentType: 'application/json',
-      dataType: 'json',
-      data: JSON.stringify(payload),
-      headers: {
-        Authorization: `Bearer ${token || ''}`,
-      },
-    })
+    api.createPost(formContent.trim(), currentUser.favoriteTeam || '', currentUserId, mediaUrl?.trim() || '')
       .done(() => {
         setFormContent('');
         setMessage('Post created successfully.');
+        setMediaUrl('');
         fetchFeed();
       })
       .fail((xhr, status, err) => {
         setError(xhr.responseJSON?.message || `Create failed: ${status}`);
       });
+  };
+
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    const lowered = String(url).toLowerCase();
+    return /\.mp4$|\.webm$|\.ogg$/.test(lowered) || lowered.includes('video');
   };
 
   const startEdit = (post) => {
@@ -106,18 +93,12 @@ const PostFeed = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    if (!currentUserId) {
+      setError('You must be logged in to edit a post.');
+      return;
+    }
 
-    $.ajax({
-      url: `${API_URL}/posts/${postId}`,
-      method: 'PUT',
-      contentType: 'application/json',
-      dataType: 'json',
-      data: JSON.stringify({ content: editContent.trim() }),
-      headers: {
-        Authorization: `Bearer ${token || ''}`,
-      },
-    })
+    api.updatePost(postId, editContent.trim(), currentUserId)
       .done(() => {
         setMessage('Post updated successfully.');
         setEditMode(null);
@@ -134,16 +115,12 @@ const PostFeed = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    if (!currentUserId) {
+      setError('You must be logged in to delete a post.');
+      return;
+    }
 
-    $.ajax({
-      url: `${API_URL}/posts/${postId}`,
-      method: 'DELETE',
-      dataType: 'json',
-      headers: {
-        Authorization: `Bearer ${token || ''}`,
-      },
-    })
+    api.deletePost(postId, currentUserId)
       .done(() => {
         setMessage('Post removed successfully.');
         fetchFeed();
@@ -173,6 +150,17 @@ const PostFeed = () => {
             rows={4}
           />
 
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ color: '#cfcfcf', fontSize: '0.9rem' }}>Media URL (Image or Video)</label>
+            <input
+              type="text"
+              className="post-media-input"
+              placeholder="https://example.com/media.mp4 or image.jpg"
+              value={mediaUrl}
+              onChange={(e) => setMediaUrl(e.target.value)}
+            />
+          </div>
+
           <div className="post-feed-actions">
             <button type="submit" className="post-feed-button primary">
               Post to Feed
@@ -180,7 +168,7 @@ const PostFeed = () => {
             <button
               type="button"
               className="post-feed-button secondary"
-              onClick={() => setFormContent('')}
+              onClick={() => { setFormContent(''); setMediaUrl(''); }}
             >
               Clear
             </button>
@@ -239,7 +227,27 @@ const PostFeed = () => {
                     </div>
                   </>
                 ) : (
-                  <p>{post.content}</p>
+                  <>
+                    <p>{post.content}</p>
+                    {post.mediaUrl && (
+                      isVideoUrl(post.mediaUrl) ? (
+                        <video
+                          src={post.mediaUrl}
+                          controls
+                          width="100%"
+                          className="post-media"
+                          style={{ borderRadius: '8px', marginTop: '10px' }}
+                        />
+                      ) : (
+                        <img
+                          src={post.mediaUrl}
+                          alt="Post media"
+                          className="post-media"
+                          style={{ width: '100%', borderRadius: '8px', marginTop: '10px' }}
+                        />
+                      )
+                    )}
+                  </>
                 )}
               </div>
             </article>

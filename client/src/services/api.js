@@ -53,6 +53,66 @@ const api = {
                 Authorization: `Bearer ${token || ''}`,
             },
         });
+    },
+
+    // Fetch posts feed
+    getFeed: function () {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/posts`,
+            method: 'GET',
+            dataType: 'json',
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
+
+    // Create a new post (supports optional mediaUrl)
+    createPost: function (content, teamTag, authorId, mediaUrl) {
+        const token = localStorage.getItem('token');
+        const payload = { author: authorId, content, teamTag };
+        if (mediaUrl) payload.mediaUrl = mediaUrl;
+        return $.ajax({
+            url: `${API_URL}/posts`,
+            method: 'POST',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
+
+    // Update a post
+    updatePost: function (postId, content, userId, userRole = '') {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/posts/${postId}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ content, userId, userRole }),
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
+
+    // Delete a post
+    deletePost: function (postId, userId, userRole = '') {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/posts/${postId}`,
+            method: 'DELETE',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ userId, userRole }),
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
     }
 };
 

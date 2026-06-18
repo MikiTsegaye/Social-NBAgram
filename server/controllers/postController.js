@@ -21,6 +21,7 @@ exports.createPost = async (req, res) => {
                 },
                 likes: newPost.likes,
                 teamTag: newPost.teamTag,
+                mediaUrl: newPost.mediaUrl,
                 createdAt: newPost.createdAt
             }
         });
@@ -45,6 +46,7 @@ exports.getAllPosts = async (req, res) => {
             },
             likes: post.likes,
             teamTag: post.teamTag,
+            mediaUrl: post.mediaUrl,
             createdAt: post.createdAt
         }));
         
@@ -113,6 +115,7 @@ exports.searchPosts = async (req, res) => {
             },
             likes: post.likes,
             teamTag: post.teamTag,
+            mediaUrl: post.mediaUrl,
             createdAt: post.createdAt
         }));
         
@@ -188,6 +191,7 @@ exports.updatePost = async (req, res) => {
                 },
                 likes: updatedPost.likes,
                 teamTag: updatedPost.teamTag,
+                mediaUrl: updatedPost.mediaUrl,
                 createdAt: updatedPost.createdAt
             }
         });

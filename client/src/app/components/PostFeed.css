@@ -246,3 +246,88 @@
     align-items: stretch;
   }
 }
+
+/* 🏀 Advanced CSS3 Property #1: Championship Neon Text Shadow Glow */
+.championship-title {
+  font-family: 'sans-serif';
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #FDB927; /* Lakers Gold! */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(253, 185, 39, 0.4);
+  letter-spacing: 2px;
+}
+
+/* 🏆 Advanced CSS3 Property #2: Multi-Column Stat Leaderboard Rule */
+.nba-split-leaderboard {
+  column-count: 2;
+  column-gap: 30px;
+  column-rule: 2px dashed rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+}
+
+/* 🏆 Advanced CSS3 Property #3: Importing Custom Typography via Font-Face */
+@font-face {
+  font-family: 'NBAChampionship';
+  src: local('Arial Black'), local('Impact'); /* Fallback maps to ensure compilation safety */
+  font-weight: bold;
+}
+
+/* 💬 Real-Time Chat Section Wrapper */
+.locker-room-chat-container {
+  background: #111316;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 900px;
+  margin: 30px auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* 📊 Advanced CSS3 Property #4: Multi-Column View split between Leaderboard and Live Chat */
+.chat-and-stats-columns {
+  column-count: 2;
+  column-gap: 24px;
+  column-rule: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 15px;
+}
+
+/* Columns break fix to make sure sections stay on their side */
+.chat-column-box, .leaderboard-column-box {
+  break-inside: avoid;
+  background: #16191d;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.chat-messages-window {
+  height: 200px;
+  overflow-y: auto;
+  background: #0a0a0c;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.chat-msg-bubble {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.9rem;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input-row input {
+  flex: 1;
+  background: #202429;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+}

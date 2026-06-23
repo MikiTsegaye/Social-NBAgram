@@ -1,41 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const groupController = require('../controllers/groupController');
+// 🛡️ Bring our security guard into the room!
+const authMiddleware = require('../middleware/auth');
 
-// Create a new group
-router.post('/groups', groupController.createGroup);
+router.get('/by-name', authMiddleware, groupController.getLockerRoomByName);
+
+// Create a new group (Needs a logged-in user!)
+router.post('/groups', authMiddleware, groupController.createGroup);
 
 // Get all groups
-router.get('/groups', groupController.getAllGroups);
+router.get('/groups', authMiddleware, groupController.getAllGroups);
 
 // Search groups by name
-router.get('/groups/search', groupController.searchGroups);
-
-// Request to join a group (user sends request)
-router.post('/groups/:groupId/request', groupController.requestToJoinGroup);
-
-// Get pending requests for a group (admin only)
-router.get('/groups/:groupId/pending-requests', groupController.getPendingRequests);
-
+router.get('/groups/search', authMiddleware, groupController.searchGroups);
+// Get locker room data by team name
+router.get('/groups/by-name', authMiddleware, groupController.getLockerRoomByName);
 // Get group details by ID
-router.get('/groups/:groupId', groupController.getGroupById);
-
-// Get group details by ID
-router.get('/groups/:groupId', groupController.getGroupById);
-
-// Admin: Approve join request
-router.post('/groups/:groupId/approve-request', groupController.approveJoinRequest);
-
-// Admin: Reject join request
-router.post('/groups/:groupId/reject-request', groupController.rejectJoinRequest);
-
-// Admin: Remove member from group
-router.post('/groups/:groupId/remove-member', groupController.removeMember);
-
-// Update group details (admin only)
-router.put('/groups/:groupId', groupController.updateGroup);
-
-// Delete a group (admin only)
-router.delete('/groups/:groupId', groupController.deleteGroup);
+router.get('/groups/:groupId', authMiddleware, groupController.getGroupById);
 
 module.exports = router;

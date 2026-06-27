@@ -32,15 +32,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// 2. Safe Seed Endpoint (Protects custom registered members from being dropped)
+// 2. Seed Endpoints
 app.get('/api/seed-info', async (req, res) => {
     try {
-        // 🚀 Fetch dynamic records live from the database cluster
         const currentUsers = await User.find({}).select('-password');
         const currentGroups = await Group.find({});
         const currentPosts = await Post.find({}).populate('author', 'username');
 
-        // Check if your database collections are completely dry
         if (currentUsers.length === 0 && currentGroups.length === 0) {
             return res.status(200).json({
                 message: 'Your database is currently empty. Please register or create groups via the app UI first!',
@@ -50,7 +48,6 @@ app.get('/api/seed-info', async (req, res) => {
             });
         }
 
-        // Return the actual live information running inside your application
         res.status(200).json({
             message: 'Live database records fetched successfully.',
             stats: {
@@ -80,6 +77,97 @@ app.get('/api/seed-info', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Failed to fetch live database sync data.', error: error.message });
+    }
+});
+
+app.post('/api/seed', async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const collectionsToReset = ['users', 'groups', 'posts'];
+
+        for (const collectionName of collectionsToReset) {
+            try {
+                const exists = await db.listCollections({ name: collectionName }).hasNext();
+                if (exists) {
+                    await db.dropCollection(collectionName);
+                }
+            } catch (dropError) {
+                if (!dropError?.message?.includes('ns not found')) {
+                    throw dropError;
+                }
+            }
+        }
+
+        const passwordHash = await bcrypt.hash('Password123!', 10);
+
+        const seededUsers = await User.create([
+            { username: 'admin', password: passwordHash, favoriteTeam: 'Lakers', isAdmin: true, profilePicture: '', isVerified: true },
+            { username: 'jordan', password: passwordHash, favoriteTeam: 'Lakers', isAdmin: false, profilePicture: '', isVerified: true },
+            { username: 'mike', password: passwordHash, favoriteTeam: 'Warriors', isAdmin: false, profilePicture: '', isVerified: true },
+            { username: 'taylor', password: passwordHash, favoriteTeam: 'Celtics', isAdmin: false, profilePicture: '', isVerified: true }
+        ]);
+
+        const [adminUser, jordanUser, mikeUser, taylorUser] = seededUsers;
+
+        const seededGroups = await Group.create([
+            {
+                name: 'Lakers',
+                description: 'Los Angeles Lakers fan group for project demo.',
+                admin: adminUser._id,
+                members: [adminUser._id, jordanUser._id],
+                pendingRequests: [mikeUser._id]
+            },
+            {
+                name: 'Warriors',
+                description: 'Golden State Warriors fan group for project demo.',
+                admin: jordanUser._id,
+                members: [jordanUser._id, mikeUser._id],
+                pendingRequests: [taylorUser._id]
+            }
+        ]);
+
+        const [lakersGroup, warriorsGroup] = seededGroups;
+
+        await User.findByIdAndUpdate(adminUser._id, { groups: [lakersGroup._id] });
+        await User.findByIdAndUpdate(jordanUser._id, { groups: [lakersGroup._id, warriorsGroup._id] });
+        await User.findByIdAndUpdate(mikeUser._id, { groups: [warriorsGroup._id] });
+        await User.findByIdAndUpdate(taylorUser._id, { groups: [warriorsGroup._id] });
+
+        const seededPosts = await Post.create([
+            {
+                author: jordanUser._id,
+                content: 'Lakers are locked in for the season!',
+                teamTag: 'Lakers',
+                likes: [adminUser._id, jordanUser._id],
+                comments: [{ author: adminUser._id, username: adminUser.username, text: 'Let’s go!' }]
+            },
+            {
+                author: mikeUser._id,
+                content: 'Warriors defense looks sharp tonight.',
+                teamTag: 'Warriors',
+                likes: [jordanUser._id, taylorUser._id],
+                comments: [{ author: taylorUser._id, username: taylorUser.username, text: 'Absolutely!' }]
+            },
+            {
+                author: adminUser._id,
+                content: 'Welcome to the league feed.',
+                teamTag: 'General',
+                likes: [jordanUser._id],
+                comments: []
+            }
+        ]);
+
+        res.status(201).json({
+            message: 'Database seeded successfully.',
+            stats: {
+                users: seededUsers.length,
+                groups: seededGroups.length,
+                posts: seededPosts.length
+            }
+        });
+    } catch (error) {
+        console.error('❌ Seed Error:', error.message || error);
+        res.status(500).json({ message: 'Failed to seed database.', error: error.message || error });
     }
 });
 

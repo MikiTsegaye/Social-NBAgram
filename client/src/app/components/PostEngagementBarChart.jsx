@@ -1,9 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import api from '../../services/api';
 
 const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const getTeamBrand = (teamName) => {
     const normalized = String(teamName || '').trim().toLowerCase();
@@ -77,86 +81,116 @@ const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
   const TOOLTIP_COLOR = teamBrand.accent;
   const chartTitle = title || `${team} Post Engagement Analysis`;
 
-  // mockData is defined inside useEffect to avoid changing hook dependencies
+  const normalizePosts = useCallback((response) => {
+    const posts = Array.isArray(response)
+      ? response
+      : Array.isArray(response.posts)
+      ? response.posts
+      : response.data || [];
+
+    const targetTeam = String(team || '').trim().toLowerCase();
+
+    return posts
+      .filter((post) => {
+        if (!targetTeam) return true;
+        const postTeam = String(post.teamTag || post.team || '').trim().toLowerCase();
+        return postTeam.includes(targetTeam);
+      })
+      .map((post, index) => {
+        const id = String(post._id || post.id || `post-${index}`);
+        const label = `Post ${index + 1}`;
+        const likes = Array.isArray(post.likes) ? post.likes.length : Number(post.likes || 0);
+        const comments = Array.isArray(post.comments) ? post.comments.length : Number(post.comments || 0);
+
+        return { id, label, likes, comments };
+      });
+  }, [team]);
 
   useEffect(() => {
-    // Mock data: Posts with likes and comments
-    const mockData = [
-      { post: 'Post 1', likes: 245, comments: 38, category: 'Game Day' },
-      { post: 'Post 2', likes: 189, comments: 52, category: 'Training' },
-      { post: 'Post 3', likes: 412, comments: 95, category: 'Achievement' },
-      { post: 'Post 4', likes: 156, comments: 23, category: 'Update' },
-      { post: 'Post 5', likes: 378, comments: 67, category: 'News' },
-      { post: 'Post 6', likes: 298, comments: 45, category: 'Highlight' },
-    ];
+    
+    setLoading(true);
+    setError(null);
+
+    api.getFeed()
+      .done((data) => {
+        const processed = normalizePosts(data);
+        setChartData(processed);
+      })
+      .fail((xhr) => {
+        const message = xhr?.responseJSON?.message || xhr?.statusText || 'Failed to load engagement data';
+        setError(message);
+      })
+      .always(() => {
+        setLoading(false);
+      });
+  }, [normalizePosts]);
+
+  useEffect(() => {
     if (!svgRef.current || !containerRef.current) return;
 
-    // Get container dimensions
+    const displayData = chartData.length > 0 ? chartData : [{ label: 'No posts', likes: 0, comments: 0 }];
     const containerWidth = containerRef.current.clientWidth;
-    const containerHeight = Math.max(400, containerWidth * 0.5);
+    const containerHeight = Math.max(480, containerWidth * 0.7);
+    const margin = { top: 66, right: 34, bottom: 86, left: 64 };
+    const width = Math.max(0, containerWidth - margin.left - margin.right);
+    const height = Math.max(0, containerHeight - margin.top - margin.bottom);
 
-    // Margins
-    const margin = { top: 60, right: 30, bottom: 60, left: 60 };
-    const width = containerWidth - margin.left - margin.right;
-    const height = containerHeight - margin.top - margin.bottom;
-
-    // Clear previous content
     d3.select(svgRef.current).selectAll('*').remove();
 
-    // Create SVG
     const svg = d3
       .select(svgRef.current)
-      .attr('width', containerWidth)
-      .attr('height', containerHeight)
+      .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
+      .attr('width', '100%')
+      .attr('height', '100%')
       .style('background', '#0a0a0a')
       .style('border-radius', '12px');
 
-    // Create main group
-    const g = svg
-      .append('g')
-      .attr('transform', `translate(${margin.left}, ${margin.top})`);
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Scales
     const xScale = d3
       .scaleBand()
-      .domain(mockData.map((d) => d.post))
+      .domain(displayData.map((d) => d.label))
       .range([0, width])
-      .padding(0.3);
+      .padding(0.24);
 
+    const maxValue = d3.max(displayData, (d) => Math.max(d.likes, d.comments)) || 0;
+    const maxInt = Math.max(1, Math.ceil(maxValue));
     const yScale = d3
       .scaleLinear()
-      .domain([0, d3.max(mockData, (d) => Math.max(d.likes, d.comments)) * 1.1])
+      .domain([0, maxInt])
       .range([height, 0]);
 
-    // X Axis
+    const yTicks = maxInt <= 8 ? d3.range(0, maxInt + 1) : d3.ticks(0, maxInt, 6).map(Math.round).filter((value, index, array) => array.indexOf(value) === index);
+
     g.append('g')
       .attr('transform', `translate(0, ${height})`)
-      .call(d3.axisBottom(xScale))
-      .attr('color', '#666')
+      .call(d3.axisBottom(xScale).tickSizeOuter(0))
+      .attr('color', '#999')
+      .selectAll('text')
+      .attr('fill', '#ddd')
       .style('font-size', '12px')
-      .select('.domain')
-      .attr('stroke', '#444');
+      .style('text-anchor', 'middle');
 
-    // Y Axis
     g.append('g')
-      .call(d3.axisLeft(yScale))
-      .attr('color', '#666')
-      .style('font-size', '12px')
-      .select('.domain')
-      .attr('stroke', '#444');
+      .call(d3.axisLeft(yScale).tickValues(yTicks).tickSize(-width).tickFormat(d3.format('d')))
+      .attr('color', '#999')
+      .selectAll('text')
+      .attr('fill', '#ddd')
+      .style('font-size', '12px');
 
-    // Y Axis Label
+    g.selectAll('.domain').attr('stroke', '#444');
+    g.selectAll('.tick line').attr('stroke', '#333');
+
     g.append('text')
       .attr('transform', 'rotate(-90)')
-      .attr('y', -45)
+      .attr('y', -48)
       .attr('x', -height / 2)
       .attr('text-anchor', 'middle')
       .attr('fill', TOOLTIP_COLOR)
       .attr('font-size', '13px')
-      .attr('font-weight', '500')
-      .text('Engagement Count');
+      .attr('font-weight', '600')
+      .text('Total Engagement');
 
-    // Grid lines
     g.append('g')
       .attr('class', 'grid')
       .attr('opacity', 0.1)
@@ -168,18 +202,16 @@ const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
       .select('.domain')
       .remove();
 
-    // Group bars by post
     const groups = g
-      .selectAll('.post-group')
-      .data(mockData)
+      .selectAll('.bar-group')
+      .data(displayData)
       .enter()
       .append('g')
-      .attr('class', 'post-group')
-      .attr('transform', (d) => `translate(${xScale(d.post)}, 0)`);
+      .attr('class', 'bar-group')
+      .attr('transform', (d) => `translate(${xScale(d.label)}, 0)`);
 
     const barWidth = xScale.bandwidth() / 2 - 4;
 
-    // Likes bars
     groups
       .append('rect')
       .attr('class', 'bar-likes')
@@ -189,38 +221,25 @@ const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
       .attr('height', (d) => height - yScale(d.likes))
       .attr('fill', PRIMARY_COLOR)
       .attr('rx', 4)
-      .style('opacity', 0.85)
-      .style('cursor', 'pointer')
+      .attr('opacity', 0.88)
       .on('mouseenter', function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('fill', SECONDARY_COLOR)
-          .style('opacity', 1);
-
-        // Show tooltip
+        d3.select(this).attr('fill', SECONDARY_COLOR).attr('opacity', 1);
         svg
           .append('text')
           .attr('class', 'tooltip')
-          .attr('x', margin.left + xScale(d.post) + barWidth / 2)
-          .attr('y', margin.top + yScale(d.likes) - 8)
+          .attr('x', margin.left + xScale(d.label) + barWidth / 2)
+          .attr('y', margin.top + yScale(d.likes) - 10)
           .attr('text-anchor', 'middle')
           .attr('fill', SECONDARY_COLOR)
           .attr('font-size', '12px')
-          .attr('font-weight', 'bold')
+          .attr('font-weight', '700')
           .text(`${d.likes} likes`);
       })
-      .on('mouseleave', function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('fill', PRIMARY_COLOR)
-          .style('opacity', 0.85);
-
+      .on('mouseleave', () => {
+        d3.selectAll('.bar-likes').attr('fill', PRIMARY_COLOR).attr('opacity', 0.88);
         svg.selectAll('.tooltip').remove();
       });
 
-    // Comments bars
     groups
       .append('rect')
       .attr('class', 'bar-comments')
@@ -230,94 +249,59 @@ const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
       .attr('height', (d) => height - yScale(d.comments))
       .attr('fill', SECONDARY_COLOR)
       .attr('rx', 4)
-      .style('opacity', 0.85)
-      .style('cursor', 'pointer')
+      .attr('opacity', 0.88)
       .on('mouseenter', function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('fill', TOOLTIP_COLOR)
-          .style('opacity', 1);
-
-        // Show tooltip
+        d3.select(this).attr('fill', TOOLTIP_COLOR).attr('opacity', 1);
         svg
           .append('text')
           .attr('class', 'tooltip')
-          .attr('x', margin.left + xScale(d.post) + barWidth + barWidth / 2 + 6)
-          .attr('y', margin.top + yScale(d.comments) - 8)
+          .attr('x', margin.left + xScale(d.label) + barWidth + barWidth / 2 + 6)
+          .attr('y', margin.top + yScale(d.comments) - 10)
           .attr('text-anchor', 'middle')
           .attr('fill', TOOLTIP_COLOR)
           .attr('font-size', '12px')
-          .attr('font-weight', 'bold')
+          .attr('font-weight', '700')
           .text(`${d.comments} comments`);
       })
-      .on('mouseleave', function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('fill', SECONDARY_COLOR)
-          .style('opacity', 0.85);
-
+      .on('mouseleave', () => {
+        d3.selectAll('.bar-comments').attr('fill', SECONDARY_COLOR).attr('opacity', 0.88);
         svg.selectAll('.tooltip').remove();
       });
 
-    // Legend
-    const legendData = [
-      { label: 'Likes', color: PRIMARY_COLOR },
-      { label: 'Comments', color: SECONDARY_COLOR },
-    ];
-
-    const legend = svg
-      .append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${containerWidth - 180}, 20)`);
-
+    const legend = svg.append('g').attr('transform', `translate(${containerWidth - 510}, 10)`);
     const legendItems = legend
       .selectAll('.legend-item')
-      .data(legendData)
+      .data([
+        { label: 'Likes', color: PRIMARY_COLOR },
+        { label: 'Comments', color: SECONDARY_COLOR }
+      ])
       .enter()
       .append('g')
       .attr('class', 'legend-item')
       .attr('transform', (d, i) => `translate(0, ${i * 24})`);
 
-    legendItems
-      .append('rect')
-      .attr('width', 14)
-      .attr('height', 14)
-      .attr('fill', (d) => d.color)
-      .attr('rx', 2);
+    legendItems.append('rect').attr('width', 14).attr('height', 14).attr('fill', (d) => d.color).attr('rx', 3);
+    legendItems.append('text').attr('x', 20).attr('y', 12).attr('fill', TOOLTIP_COLOR).attr('font-size', '12px').attr('font-weight', '500').text((d) => d.label);
 
-    legendItems
-      .append('text')
-      .attr('x', 22)
-      .attr('y', 11)
-      .attr('font-size', '12px')
-      .attr('fill', TOOLTIP_COLOR)
-      .attr('font-weight', '500')
-      .text((d) => d.label);
-
-    // Title
     svg
       .append('text')
       .attr('x', containerWidth / 2)
-      .attr('y', 30)
+      .attr('y', 32)
       .attr('text-anchor', 'middle')
-      .attr('font-size', '18px')
       .attr('fill', SECONDARY_COLOR)
+      .attr('font-size', '18px')
       .attr('font-weight', 'bold')
-      .attr('letter-spacing', '1px')
       .text(chartTitle);
 
-    // X Axis Label (inside group to avoid bottom clipping)
     g.append('text')
       .attr('x', width / 2)
-      .attr('y', height + 40)
+      .attr('y', height + 48)
       .attr('text-anchor', 'middle')
       .attr('fill', TOOLTIP_COLOR)
       .attr('font-size', '13px')
-      .attr('font-weight', '500')
+      .attr('font-weight', '600')
       .text('Posts');
-  }, [chartTitle, PRIMARY_COLOR, SECONDARY_COLOR, TOOLTIP_COLOR]);
+  }, [chartData, chartTitle, PRIMARY_COLOR, SECONDARY_COLOR, TOOLTIP_COLOR]);
 
   return (
     <div
@@ -331,10 +315,21 @@ const PostEngagementBarChart = ({ team = 'Lakers', title = null }) => {
         background: '#111214',
         borderRadius: '14px',
         border: `1px solid ${SECONDARY_COLOR}`,
-        minHeight: '400px',
+        minHeight: '420px',
+        position: 'relative'
       }}
     >
-      <svg ref={svgRef} style={{ maxWidth: '100%', height: 'auto' }} />
+      {loading && (
+        <div style={{ position: 'absolute', top: '18px', left: '20px', color: '#ddd', fontSize: '0.95rem' }}>
+          Loading engagement data...
+        </div>
+      )}
+      {error && (
+        <div style={{ position: 'absolute', top: '18px', left: '20px', color: '#ff7b7b', fontSize: '0.95rem' }}>
+          {error}
+        </div>
+      )}
+      <svg ref={svgRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };

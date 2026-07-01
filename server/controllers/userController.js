@@ -156,3 +156,80 @@ exports.searchUsers = async (req, res) => {
         res.status(500).json({ message: "Error searching users", error });
     }
 };
+
+// Promote user to admin (Admin only)
+exports.promoteUserToAdmin = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Validate that the user being promoted exists
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check if already admin
+        if (targetUser.isAdmin) {
+            return res.status(400).json({ message: "User is already an admin" });
+        }
+
+        // Promote user to admin
+        targetUser.isAdmin = true;
+        await targetUser.save();
+
+        res.status(200).json({
+            message: `User ${targetUser.username} promoted to admin successfully`,
+            user: {
+                _id: targetUser._id,
+                username: targetUser.username,
+                favoriteTeam: targetUser.favoriteTeam,
+                isAdmin: targetUser.isAdmin,
+                createdAt: targetUser.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error promoting user to admin", error });
+    }
+};
+
+// Demote admin to regular user (Admin only)
+exports.demoteAdminToUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+
+        // Prevent self-demotion
+        if (userId === currentUserId) {
+            return res.status(400).json({ message: "You cannot demote yourself" });
+        }
+
+        // Validate that the user being demoted exists
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check if already a regular user
+        if (!targetUser.isAdmin) {
+            return res.status(400).json({ message: "User is not an admin" });
+        }
+
+        // Demote admin to regular user
+        targetUser.isAdmin = false;
+        await targetUser.save();
+
+        res.status(200).json({
+            message: `Admin ${targetUser.username} demoted to regular user successfully`,
+            user: {
+                _id: targetUser._id,
+                username: targetUser.username,
+                favoriteTeam: targetUser.favoriteTeam,
+                isAdmin: targetUser.isAdmin,
+                createdAt: targetUser.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error demoting admin to user", error });
+    }
+};
+

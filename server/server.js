@@ -13,6 +13,7 @@ const userRoutes = require('./routes/userRoutes');
 const authMiddleware = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
 const messageRoutes = require('./routes/messageRoutes');
+const nbaTeams = require('./data/nbaTeams');
 
 const User = require('./models/User');
 const Group = require('./models/Group');
@@ -32,7 +33,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 2. Seed Endpoints
+// API route to fetch live database sync information for debugging and development purposes
 app.get('/api/seed-info', async (req, res) => {
     try {
         const currentUsers = await User.find({}).select('-password');
@@ -80,96 +81,38 @@ app.get('/api/seed-info', async (req, res) => {
     }
 });
 
-app.post('/api/seed', async (req, res) => {
+// 🏀 NBA Teams API Endpoint
+app.get('/api/nba-teams', (req, res) => {
     try {
-        const db = mongoose.connection.db;
-        const collectionsToReset = ['users', 'groups', 'posts'];
-
-        for (const collectionName of collectionsToReset) {
-            try {
-                const exists = await db.listCollections({ name: collectionName }).hasNext();
-                if (exists) {
-                    await db.dropCollection(collectionName);
-                }
-            } catch (dropError) {
-                if (!dropError?.message?.includes('ns not found')) {
-                    throw dropError;
-                }
-            }
+        const { conference, division } = req.query;
+        
+        let filteredTeams = nbaTeams;
+        
+        // Filter by conference if specified
+        if (conference) {
+            filteredTeams = filteredTeams.filter(team => 
+                team.conference.toLowerCase() === conference.toLowerCase()
+            );
         }
-
-        const passwordHash = await bcrypt.hash('Password123!', 10);
-
-        const seededUsers = await User.create([
-            { username: 'admin', password: passwordHash, favoriteTeam: 'Lakers', isAdmin: true, profilePicture: '', isVerified: true },
-            { username: 'jordan', password: passwordHash, favoriteTeam: 'Lakers', isAdmin: false, profilePicture: '', isVerified: true },
-            { username: 'mike', password: passwordHash, favoriteTeam: 'Warriors', isAdmin: false, profilePicture: '', isVerified: true },
-            { username: 'taylor', password: passwordHash, favoriteTeam: 'Celtics', isAdmin: false, profilePicture: '', isVerified: true }
-        ]);
-
-        const [adminUser, jordanUser, mikeUser, taylorUser] = seededUsers;
-
-        const seededGroups = await Group.create([
-            {
-                name: 'Lakers',
-                description: 'Los Angeles Lakers fan group for project demo.',
-                admin: adminUser._id,
-                members: [adminUser._id, jordanUser._id],
-                pendingRequests: [mikeUser._id]
-            },
-            {
-                name: 'Warriors',
-                description: 'Golden State Warriors fan group for project demo.',
-                admin: jordanUser._id,
-                members: [jordanUser._id, mikeUser._id],
-                pendingRequests: [taylorUser._id]
-            }
-        ]);
-
-        const [lakersGroup, warriorsGroup] = seededGroups;
-
-        await User.findByIdAndUpdate(adminUser._id, { groups: [lakersGroup._id] });
-        await User.findByIdAndUpdate(jordanUser._id, { groups: [lakersGroup._id, warriorsGroup._id] });
-        await User.findByIdAndUpdate(mikeUser._id, { groups: [warriorsGroup._id] });
-        await User.findByIdAndUpdate(taylorUser._id, { groups: [warriorsGroup._id] });
-
-        const seededPosts = await Post.create([
-            {
-                author: jordanUser._id,
-                content: 'Lakers are locked in for the season!',
-                teamTag: 'Lakers',
-                likes: [adminUser._id, jordanUser._id],
-                comments: [{ author: adminUser._id, username: adminUser.username, text: 'Let’s go!' }]
-            },
-            {
-                author: mikeUser._id,
-                content: 'Warriors defense looks sharp tonight.',
-                teamTag: 'Warriors',
-                likes: [jordanUser._id, taylorUser._id],
-                comments: [{ author: taylorUser._id, username: taylorUser.username, text: 'Absolutely!' }]
-            },
-            {
-                author: adminUser._id,
-                content: 'Welcome to the league feed.',
-                teamTag: 'General',
-                likes: [jordanUser._id],
-                comments: []
-            }
-        ]);
-
-        res.status(201).json({
-            message: 'Database seeded successfully.',
-            stats: {
-                users: seededUsers.length,
-                groups: seededGroups.length,
-                posts: seededPosts.length
-            }
+        
+        // Filter by division if specified
+        if (division) {
+            filteredTeams = filteredTeams.filter(team => 
+                team.division.toLowerCase() === division.toLowerCase()
+            );
+        }
+        
+        res.status(200).json({
+            message: 'NBA Teams retrieved successfully',
+            total: filteredTeams.length,
+            teams: filteredTeams
         });
     } catch (error) {
-        console.error('❌ Seed Error:', error.message || error);
-        res.status(500).json({ message: 'Failed to seed database.', error: error.message || error });
+        res.status(500).json({ message: 'Error fetching NBA teams', error: error.message });
     }
 });
+
+
 
 // 📁 Group Message History Routing Lookup
 app.get('/api/messages/:teamName', async (req, res) => {

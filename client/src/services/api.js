@@ -109,7 +109,7 @@ const api = {
         });
     },
 
-    // Update a post
+    // Update a post user and admin access control
     updatePost: function (postId, content, userId, userRole = '') {
         const token = localStorage.getItem('token');
         return $.ajax({
@@ -186,6 +186,34 @@ const api = {
             method: 'GET',
             dataType: 'json',
             data: { query, teamTag, authorName }, // 3 custom parameters!
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
+
+    // Promote a user to admin
+    promoteUserToAdmin: function (userId) {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/users/${userId}/promote-admin`,
+            method: 'PUT',
+            contentType: 'application/json',
+            dataType: 'json',
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
+
+    // Demote an admin to regular user
+    demoteAdminToUser: function (userId) {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/users/${userId}/demote-admin`,
+            method: 'PUT',
+            contentType: 'application/json',
+            dataType: 'json',
             headers: {
                 Authorization: `Bearer ${token || ''}`,
             },

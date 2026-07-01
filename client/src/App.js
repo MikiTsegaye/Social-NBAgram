@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import LockerRoom from './pages/LockerRoom';
+import AdminPanel from './pages/AdminPanel';
 import TeamStatsPieChart from './app/components/TeamStatsPieChart';
 import PostEngagementBarChart from './app/components/PostEngagementBarChart';
 import PostFeed from './app/components/PostFeed';
@@ -20,7 +21,7 @@ function App() {
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [groups, setGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [currentView, setCurrentView] = useState('feed'); // values: 'feed', 'chat', 'dms'
+  const [currentView, setCurrentView] = useState('feed'); // values: 'feed', 'chat', 'dms', 'admin'
 
   // 📈 Track scrolling position to show/hide the floating action back-to-top button
   const [showFloatingNav, setShowFloatingNav] = useState(false);
@@ -117,10 +118,13 @@ function App() {
           </header>
 
           {/* ================== NAVIGATION CONTROLLER BAR ================== */}
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', margin: '20px 0' }}>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', margin: '20px 0', flexWrap: 'wrap' }}>
             <button onClick={() => setCurrentView('feed')} style={{ background: currentView === 'feed' ? '#FDB927' : '#222', color: currentView === 'feed' ? '#000' : '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📰 News Feed</button>
             <button onClick={() => setCurrentView('chat')} style={{ background: currentView === 'chat' ? '#FDB927' : '#222', color: currentView === 'chat' ? '#000' : '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📢 Team Locker Chat</button>
             <button onClick={() => setCurrentView('dms')} style={{ background: currentView === 'dms' ? '#FDB927' : '#222', color: currentView === 'dms' ? '#000' : '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>🔒 Direct Messages</button>
+            {(user?.role === 'admin' || user?.isAdmin === true) && (
+              <button onClick={() => setCurrentView('admin')} style={{ background: currentView === 'admin' ? '#ffd700' : '#333', color: currentView === 'admin' ? '#000' : '#fdb927', border: '2px solid #fdb927', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>⚙️ Admin Panel</button>
+            )}
           </div>
 
           {/* ================== QUICK JUMP ANCHOR LINK BAR ================== */}
@@ -241,6 +245,10 @@ function App() {
 
           {currentView === 'dms' && (
             <DirectMessages currentUser={user} socket={globalSocket} onBack={() => setCurrentView('feed')} />
+          )}
+
+          {currentView === 'admin' && (
+            <AdminPanel currentUser={user} />
           )}
 
           {/* ================== FLOATING PERSISTENT NAV BUTTON ================== */}

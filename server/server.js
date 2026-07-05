@@ -79,7 +79,6 @@ const io = new Server(server, {
 const activePlayers = new Map();
 
 io.on('connection', (socket) => {
-  console.log(`🏀 A player connected to the stadium: ${socket.id}`);
 
   // 👥 NEW: Handle registering user identity and tracking room state
   socket.on('join_team', ({ teamName, username }) => {
@@ -176,7 +175,6 @@ io.on('connection', (socket) => {
     const playerData = activePlayers.get(socket.id);
     if (playerData) {
         activePlayers.delete(socket.id);
-        console.log(`🛑 Player @${playerData.username} left the stadium.`);
         // Refresh the roster for remaining users in that room
         broadcastRoomRoster(playerData.team);
     } else {

@@ -88,7 +88,6 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
   };
 
   const currentUserId = currentUser?._id || currentUser?.id || '';
-  const isCurrentUserAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin === true;
 
   const handleCreatePost = (e) => {
     e.preventDefault();
@@ -140,7 +139,7 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
     setEditContent('');
     setError('');
   };
-  // Admins can edit any post, regular users can only edit their own
+
   const handleUpdatePost = (postId) => {
     if (!editContent.trim()) {
       setError('Post content cannot be empty.');
@@ -152,11 +151,11 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
       return;
     }
 
-    api.updatePost(postId, editContent.trim(), currentUserId, currentUser.role || '')
-      .done((data) => {
+    api.updatePost(postId, editContent.trim(), currentUserId)
+      .done(() => {
+        setMessage('Post updated successfully.');
         setEditMode(null);
         setEditContent('');
-        setMessage('Post updated successfully.');
         fetchFeed();
       })
       .fail((xhr, status, err) => {
@@ -197,9 +196,6 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
           return p;
         }));
         
-        if (socket) {
-          socket.emit('send_post_update', { postId, likes: updatedLikes });
-        }
       })
       .fail((xhr) => {
         console.error("❌ Toggle like system request error:", xhr.responseJSON?.message);
@@ -332,8 +328,6 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
           const authorObject = post.author || {};
           const authorId = authorObject._id || authorObject.id || '';
           const isOwner = authorId === currentUserId && currentUserId !== '';
-          const canManagePost = isOwner || isCurrentUserAdmin;
-          const isAdminManagingOtherPost = !isOwner && isCurrentUserAdmin;
           const createdAt = post.createdAt ? new Date(post.createdAt).toLocaleString() : 'Recent';
                 
           return (
@@ -343,9 +337,8 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                   <div className="post-author">@{authorObject.username || 'Unknown Player'}</div>
                   <div className="post-meta">{post.teamTag || 'Team Feed'} · {createdAt}</div>
                 </div>
-                {canManagePost && (
+                {isOwner && (
                   <div className="post-card-controls">
-                    {isAdminManagingOtherPost && <span className="admin-badge" title="You are managing another user's post">⭐ ADMIN</span>}
                     <button className="control-button edit" onClick={() => startEdit(post)}>
                       {editMode === post._id ? 'Editing' : 'Edit'}
                     </button>
@@ -445,8 +438,6 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                     {post.comments && post.comments.map((comment, idx) => {
                       const commentAuthorId = comment.author?._id || comment.author || '';
                       const isCommentOwner = String(commentAuthorId) === String(currentUserId);
-                      const canDeleteComment = isCommentOwner || isCurrentUserAdmin;
-                      const isAdminDeletingOtherComment = !isCommentOwner && isCurrentUserAdmin;
 
                       return (
                         <div key={comment._id || idx} style={{ 
@@ -462,21 +453,16 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                           </div>
 
                           {/* 🗑️ Trash action handle */}
-                          {canDeleteComment && comment._id && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              {isAdminDeletingOtherComment && (
-                                <span style={{ fontSize: '0.65rem', color: '#FDB927', fontWeight: 'bold' }}>⭐</span>
-                              )}
-                              <button
-                                onClick={() => handleDeleteComment(post._id, comment._id)}
-                                style={{ background: 'transparent', color: '#666', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '0 4px', transition: 'color 0.2s' }}
-                                onMouseEnter={(e) => e.target.style.color = '#ce1141'}
-                                onMouseLeave={(e) => e.target.style.color = '#666'}
-                                title={isAdminDeletingOtherComment ? 'Delete comment (as admin)' : 'Delete comment'}
-                              >
+                          {isCommentOwner && comment._id && (
+                            <button
+                              onClick={() => handleDeleteComment(post._id, comment._id)}
+                              style={{ background: 'transparent', color: '#666', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '0 4px', transition: 'color 0.2s' }}
+                              onMouseEnter={(e) => e.target.style.color = '#ce1141'}
+                              onMouseLeave={(e) => e.target.style.color = '#666'}
+                              title="Delete comment"
+                            >
                               &times;
                             </button>
-                            </div>
                           )}
                         </div>
                       );

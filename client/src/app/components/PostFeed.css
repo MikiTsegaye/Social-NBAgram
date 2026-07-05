@@ -271,15 +271,7 @@
   letter-spacing: 2px;
 }
 
-/* 🏆 Advanced CSS3 Property #2: Multi-Column Stat Leaderboard Rule */
-.nba-split-leaderboard {
-  column-count: 2;
-  column-gap: 30px;
-  column-rule: 2px dashed rgba(255, 255, 255, 0.1);
-  margin-top: 20px;
-}
-
-/* 🏆 Advanced CSS3 Property #3: Importing Custom Typography via Font-Face */
+/* 🏆 Advanced CSS3 Property #2: Importing Custom Typography via Font-Face */
 @font-face {
   font-family: 'NBAChampionship';
   src: local('Arial Black'), local('Impact'); /* Fallback maps to ensure compilation safety */
@@ -322,26 +314,4 @@
   padding: 10px;
   margin-bottom: 12px;
   text-align: left;
-}
-
-.chat-msg-bubble {
-  margin-bottom: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 0.9rem;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 10px;
-}
-
-.chat-input-row input {
-  flex: 1;
-  background: #202429;
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
 }

@@ -6,14 +6,14 @@ import AdminPanel from './pages/AdminPanel';
 import TeamStatsPieChart from './app/components/TeamStatsPieChart';
 import PostEngagementBarChart from './app/components/PostEngagementBarChart';
 import PostFeed from './app/components/PostFeed';
-import api from './services/api';
+import api, { API_BASE_URL } from './services/api';
 import TacticalBoard from './app/components/TacticalBoard';
 import LockerRoomChat from './pages/LockerRoomChat';
 import DirectMessages from './pages/DirectMessages';
 import { io } from 'socket.io-client';
 
 // 📡 Initialize single persistent global socket channel outside component cycles
-const globalSocket = io('http://localhost:5000');
+const globalSocket = io(API_BASE_URL);
 
 function App() {
   const [user, setUser] = useState(null);

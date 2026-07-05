@@ -62,3 +62,5 @@ desktop.ini
 /server/db_backups/
 *.mp4
 *.mov
+
+PROJECT_AUDIT_AND_CLEANUP.md

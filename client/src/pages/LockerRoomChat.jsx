@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 export default function LockerRoomChat({ currentUser, socket, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -35,7 +35,7 @@ export default function LockerRoomChat({ currentUser, socket, onBack }) {
     const cleanRoomName = userTeam.trim().toLowerCase();
 
     // 1. 📂 FETCH PERSISTED RECORDS FROM MONGODB
-    fetch(`http://localhost:5000/api/messages/${encodeURIComponent(cleanRoomName)}`)
+    fetch(`${API_BASE_URL}/api/messages/${encodeURIComponent(cleanRoomName)}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         if (Array.isArray(data)) {

@@ -1,5 +1,7 @@
 import $ from 'jquery';
-const API_URL = 'http://localhost:5000/api';
+
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+export const API_URL = `${API_BASE_URL}/api`;
 
 const api = {
     //login function using jquery ajax
@@ -15,7 +17,7 @@ const api = {
     getLockerRoomByName: function (teamName) {
         const token = localStorage.getItem('token');
         return $.ajax({
-            url: `http://localhost:5000/api/groups/by-name?teamName=${encodeURIComponent(teamName)}`,
+            url: `${API_URL}/groups/by-name?teamName=${encodeURIComponent(teamName)}`,
             method: 'GET',
             dataType: 'json',
             headers: { 

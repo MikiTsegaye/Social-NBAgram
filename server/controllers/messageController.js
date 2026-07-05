@@ -1,60 +1,76 @@
 const Message = require('../models/Message');
 
-// 🏀 Action 1: Fetch all messages from a team's group chat locker room
-exports.getGroupMessages = async (req, res, next) => {
+exports.getTeamMessages = async (req, res, next) => {
   try {
-    const { groupId } = req.params;
-    
-    const messages = await Message.find({ group: groupId })
-      .populate('sender', '_id username favoriteTeam') // Attach sender details nicely!
-      .sort({ createdAt: 1 }); // Sort from oldest to newest so it reads like a real chat feed
-      
-    res.status(200).json(messages);
-  } catch (error) {
-    next(error); // Pass it to error shield!
-  }
-};
+    const teamName = decodeURIComponent(req.params.teamName || '').trim().toLowerCase();
+    if (!teamName) {
+      return res.status(400).json({ error: 'teamName is required' });
+    }
 
-// 🔒 Action 2: Fetch all private DMs between two specific users
-exports.getPersonalMessages = async (req, res, next) => {
-  try {
-    const myId = req.user.id; // Grabbed straight from your auth guard token!
-    const { otherUserId } = req.params;
-    
-    // Find messages where (I sent it to them) OR (They sent it to me)
-    const messages = await Message.find({
-      $or: [
-        { sender: myId, receiver: otherUserId },
-        { sender: otherUserId, receiver: myId }
-      ]
-    })
-    .populate('sender', '_id username favoriteTeam')
-    .sort({ createdAt: 1 });
-    
-    res.status(200).json(messages);
+    const messages = await Message.find({ team: teamName })
+      .sort({ createdAt: 1 });
+
+    const formattedMessages = messages.map((msg) => ({
+      sender: msg.senderName || 'Anonymous',
+      text: msg.content,
+      team: msg.team,
+      timestamp: msg.createdAt
+    }));
+
+    res.status(200).json(formattedMessages);
   } catch (error) {
     next(error);
   }
 };
 
-// 📝 Action 3: Save a message manually (Fallback if WebSockets sync needs rest)
+exports.getPersonalMessages = async (req, res, next) => {
+  try {
+    const myId = req.user.id || req.user._id;
+    const { otherUserId } = req.params;
+
+    const messages = await Message.find({
+      team: 'private_dm',
+      $or: [
+        { sender: myId, receiver: otherUserId },
+        { sender: otherUserId, receiver: myId }
+      ]
+    })
+      .sort({ createdAt: 1 });
+
+    const formattedMessages = messages.map((msg) => ({
+      senderId: msg.sender,
+      senderName: msg.senderName || 'Anonymous',
+      receiverId: msg.receiver,
+      content: msg.content,
+      timestamp: msg.createdAt
+    }));
+
+    res.status(200).json(formattedMessages);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.sendMessage = async (req, res, next) => {
   try {
     const senderId = req.user.id;
-    const { content, receiverId, groupId } = req.body;
-    
+    const senderName = req.user.username || req.user.name || 'Anonymous';
+    const { content, receiverId, groupId, team } = req.body;
+
     const newMessage = new Message({
       sender: senderId,
+      senderName,
       content,
       receiver: receiverId || undefined,
-      group: groupId || undefined
+      group: groupId || undefined,
+      team: team || (groupId ? 'group_chat' : 'private_dm')
     });
-    
+
     await newMessage.save();
-    
+
     const populatedMessage = await Message.findById(newMessage._id)
       .populate('sender', '_id username favoriteTeam');
-      
+
     res.status(201).json(populatedMessage);
   } catch (error) {
     next(error);

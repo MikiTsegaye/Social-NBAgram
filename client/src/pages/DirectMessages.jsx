@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 export default function DirectMessages({ currentUser, socket, onBack }) {
   const [users, setUsers] = useState([]);
@@ -37,7 +37,7 @@ export default function DirectMessages({ currentUser, socket, onBack }) {
     const otherId = selectedUser._id;
 
     // Fetch previous conversational threads safely from the database
-    fetch(`http://localhost:5000/api/messages/personal/${otherId}`, {
+    fetch(`${API_BASE_URL}/api/messages/personal/${otherId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.ok ? res.json() : [])

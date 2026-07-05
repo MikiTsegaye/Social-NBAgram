@@ -4,8 +4,6 @@ const groupController = require('../controllers/groupController');
 // 🛡️ Bring our security guard into the room!
 const authMiddleware = require('../middleware/auth');
 
-router.get('/by-name', authMiddleware, groupController.getLockerRoomByName);
-
 // Create a new group (Needs a logged-in user!)
 router.post('/groups', authMiddleware, groupController.createGroup);
 

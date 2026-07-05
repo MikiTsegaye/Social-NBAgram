@@ -76,46 +76,69 @@ const io = new Server(server, {
 });
 
 // 📡 Real-time broadcast engine
+const activePlayers = new Map();
+
 io.on('connection', (socket) => {
   console.log(`🏀 A player connected to the stadium: ${socket.id}`);
 
-  socket.on('join_team', (teamName) => {
-    if (teamName) {
-      const normalizedTeam = teamName.trim().toLowerCase();
-      socket.join(normalizedTeam);
-      console.log(`🚪 Player unified on channel room: ${normalizedTeam}`);
-    }
-  }); // 👈 Decoupled cleanly here!
+  // 👥 NEW: Handle registering user identity and tracking room state
+  socket.on('join_team', ({ teamName, username }) => {
+    if (!teamName || !username) return;
+    
+    const normalizedTeam = teamName.trim().toLowerCase();
+    socket.join(normalizedTeam);
+    
+    // Save player's current location details
+    activePlayers.set(socket.id, { username, team: normalizedTeam });
+    console.log(`🚪 Player @${username} unified on channel room: ${normalizedTeam}`);
+
+    // Broadcast the updated list of online users to everyone in this team room
+    broadcastRoomRoster(normalizedTeam);
+  });
   
+  // Helper function to get all unique usernames in a specific room
+  function broadcastRoomRoster(roomName) {
+    const usersInRoom = [];
+    activePlayers.forEach((value) => {
+      if (value.team === roomName) {
+        usersInRoom.push({ username: value.username });
+      }
+    });
+    // Send to everyone in the locker room channel
+    io.to(roomName).emit('room_users_update', usersInRoom);
+  }
+
   // 💬 REAL-TIME COMMENT UPDATE BROADCASTER
   socket.on('send_post_comment_update', (updatedCommentPayload) => {
       socket.broadcast.emit('receive_post_comment_update', updatedCommentPayload);
   });
 
-  // 📰 REAL-TIME POST STREAM BROADCASTER (Sits independently in the stadium connection)
+  // 📰 REAL-TIME POST STREAM BROADCASTER
   socket.on('send_post', (newPostData) => {
       console.log(`📣 New league post broadcasted by: @${newPostData?.author?.username || 'Player'}`);
-      // Broadcast out to all connected clients instantly
       io.emit('receive_post', newPostData);
   });
 
-  // 💬 SEND CHAT MESSAGE (Handles both Group Channels and Private DMs)
+  // 💬 SEND CHAT MESSAGE
   socket.on('send_message', async (data) => {
+    // Note: To match what LockerRoomChat.jsx expects, we should emit to the team channel room
+    const cleanTeam = data.team ? data.team.trim().toLowerCase() : null;
     const userRole = socket.userRole || data.role || 'watcher';
     const augmentedPayload = {
         ...data,
-        // If they are a moderator, add the visual tag prefix
         captainTag: userRole === 'moderator' ? '[Captain] ' : ''
     };
-    io.to(data.room).emit('receive_message', augmentedPayload);
 
-    if (!data || !data.sender || !data.text) {
-        return;
+    if (cleanTeam) {
+        io.to(cleanTeam).emit('receive_message', augmentedPayload);
+    } else {
+        io.to(data.room).emit('receive_message', augmentedPayload);
     }
+
+    if (!data || !data.sender || !data.text) return;
 
     try {
         if (data.team) {
-            // 🏀 Room Locker Chat Controller
             const cleanTeam = data.team.trim().toLowerCase();
             const newMsg = new Message({
                 sender: data.senderId, 
@@ -124,16 +147,9 @@ io.on('connection', (socket) => {
                 team: cleanTeam
             });
             await newMsg.save();
-
-            io.emit('receive_message', {
-                senderId: data.senderId,
-                sender: data.sender, 
-                text: data.text,
-                team: cleanTeam,
-                timestamp: newMsg.createdAt
-            });
+            
+            // Avoid duplicate emission if io.to(cleanTeam) already handles the payload live update
         } else if (data.receiverId) {
-            // 🔒 Private 1-on-1 DM Controller
             const newDM = new Message({
                 sender: data.senderId,
                 senderName: data.sender,
@@ -156,8 +172,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 🛑 Update disconnected user logs and broadcast the leaving event to room
   socket.on('disconnect', () => {
-    console.log('🛑 A player left the stadium.');
+    const playerData = activePlayers.get(socket.id);
+    if (playerData) {
+        activePlayers.delete(socket.id);
+        console.log(`🛑 Player @${playerData.username} left the stadium.`);
+        // Refresh the roster for remaining users in that room
+        broadcastRoomRoster(playerData.team);
+    } else {
+        console.log('🛑 An anonymous player left the stadium.');
+    }
   });
 });
 

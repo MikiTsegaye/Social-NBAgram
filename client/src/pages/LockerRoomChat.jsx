@@ -30,7 +30,7 @@ export default function LockerRoomChat({ currentUser, socket, onBack }) {
   }, [userTeam]);
 
   useEffect(() => {
-    if (!userTeam || !socket) return;
+    if (!userTeam || !socket || !currentUser) return; // Added currentUser check
 
     const cleanRoomName = userTeam.trim().toLowerCase();
 
@@ -44,10 +44,13 @@ export default function LockerRoomChat({ currentUser, socket, onBack }) {
       })
       .catch(err => console.error("Could not load database logs:", err));
 
-    // 2. 📡 SIGN INTO THE RELEVANT SOCKET CHANNEL
-    socket.emit('join_team', cleanRoomName);
+    // 2. 📡 SIGN INTO THE RELEVANT SOCKET CHANNEL (Passing object payload with username now)
+    socket.emit('join_team', { 
+      teamName: cleanRoomName, 
+      username: currentUser?.username || 'Anonymous' 
+    });
 
-    // 3. ⚡ LISTEN LIVE WITHOUT DISCONNECTING DROPS
+    // 3. ⚡ LISTEN LIVE FOR MESSAGES
     socket.on('receive_message', (messagePayload) => {
       const incomingTeam = (messagePayload.team || '').trim().toLowerCase();
       if (incomingTeam === cleanRoomName) {
@@ -55,10 +58,20 @@ export default function LockerRoomChat({ currentUser, socket, onBack }) {
       }
     });
 
+    // 4. 👥 NEW: LISTEN FOR LIVE SOCKET ROSTER UPDATES
+    socket.on('room_users_update', (onlineUsersArray) => {
+      console.log("👥 Live roster packet intercepted:", onlineUsersArray);
+      setGroupData(prev => ({
+        ...prev,
+        members: onlineUsersArray // Override members with actual online players array
+      }));
+    });
+
     return () => {
       socket.off('receive_message');
+      socket.off('room_users_update');
     };
-  }, [userTeam, socket]);
+  }, [userTeam, socket, currentUser]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

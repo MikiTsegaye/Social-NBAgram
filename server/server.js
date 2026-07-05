@@ -90,7 +90,6 @@ io.on('connection', (socket) => {
     
     // Save player's current location details
     activePlayers.set(socket.id, { username, team: normalizedTeam });
-    console.log(`🚪 Player @${username} unified on channel room: ${normalizedTeam}`);
 
     // Broadcast the updated list of online users to everyone in this team room
     broadcastRoomRoster(normalizedTeam);

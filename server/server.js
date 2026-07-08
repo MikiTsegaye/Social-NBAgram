@@ -21,39 +21,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🏀 NBA Teams API Endpoint
-app.get('/api/nba-teams', (req, res) => {
-    try {
-        const { conference, division } = req.query;
-        
-        let filteredTeams = nbaTeams;
-        
-        // Filter by conference if specified
-        if (conference) {
-            filteredTeams = filteredTeams.filter(team => 
-                team.conference.toLowerCase() === conference.toLowerCase()
-            );
-        }
-        
-        // Filter by division if specified
-        if (division) {
-            filteredTeams = filteredTeams.filter(team => 
-                team.division.toLowerCase() === division.toLowerCase()
-            );
-        }
-        
-        res.status(200).json({
-            message: 'NBA Teams retrieved successfully',
-            total: filteredTeams.length,
-            teams: filteredTeams
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching NBA teams', error: error.message });
-    }
-});
-
-
-
+// 2. Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', groupRoutes);
 app.use('/api', postRoutes);

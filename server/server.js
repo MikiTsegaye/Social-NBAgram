@@ -177,9 +177,7 @@ io.on('connection', (socket) => {
         activePlayers.delete(socket.id);
         // Refresh the roster for remaining users in that room
         broadcastRoomRoster(playerData.team);
-    } else {
-        console.log('🛑 An anonymous player left the stadium.');
-    }
+    } 
   });
 });
 

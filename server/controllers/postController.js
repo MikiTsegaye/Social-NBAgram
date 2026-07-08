@@ -302,7 +302,8 @@ exports.addComment = async (req, res) => {
             author: new mongoose.Types.ObjectId(userId),
             username: username || 'Anonymous Player',
             text: text.trim(),
-            createdAt: new Date()
+            createdAt: new Date(),
+            updatedAt: null
         };
 
         post.comments.push(newComment);
@@ -315,6 +316,50 @@ exports.addComment = async (req, res) => {
     } catch (error) {
         console.error("❌ Comment Creation Error:", error.message);
         res.status(500).json({ message: "Error adding comment", error: error.message });
+    }
+};
+
+// Update a comment on a post
+exports.updateComment = async (req, res) => {
+    try {
+        const { postId, commentId } = req.params;
+        const { text } = req.body;
+        const userId = req.user?.id || req.user?._id;
+        const isAdmin = req.user?.isAdmin || false;
+
+        if (!text || !text.trim()) {
+            return res.status(400).json({ message: 'Comment content cannot be empty.' });
+        }
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized - Valid session required.' });
+        }
+
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found.' });
+        }
+
+        const comment = post.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found.' });
+        }
+
+        if (comment.author.toString() !== userId && !isAdmin) {
+            return res.status(403).json({ message: 'Unauthorized - You can only edit your own comments.' });
+        }
+
+        comment.text = text.trim();
+        comment.updatedAt = new Date();
+        await post.save();
+
+        res.status(200).json({
+            message: 'Comment updated successfully',
+            comments: post.comments
+        });
+    } catch (error) {
+        console.error('❌ Comment Update Error:', error.message);
+        res.status(500).json({ message: 'Error updating comment', error: error.message });
     }
 };
 

@@ -14,6 +14,8 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(initialUser || {});
   const [commentInputs, setCommentInputs] = useState({});
+  const [editingComment, setEditingComment] = useState({ postId: null, commentId: null });
+  const [editCommentText, setEditCommentText] = useState('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -88,6 +90,7 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
   };
 
   const currentUserId = currentUser?._id || currentUser?.id || '';
+  const isAdminUser = currentUser?.role === 'admin' || currentUser?.isAdmin === true;
 
   const handleCreatePost = (e) => {
     e.preventDefault();
@@ -151,7 +154,7 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
       return;
     }
 
-    api.updatePost(postId, editContent.trim(), currentUserId)
+    api.updatePost(postId, editContent.trim(), currentUserId, isAdminUser ? 'admin' : '')
       .done(() => {
         setMessage('Post updated successfully.');
         setEditMode(null);
@@ -170,7 +173,7 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
       return;
     }
 
-    api.deletePost(postId, currentUserId)
+    api.deletePost(postId, currentUserId, isAdminUser ? 'admin' : '')
       .done(() => {
         setMessage('Post removed successfully.');
         fetchFeed();
@@ -249,6 +252,50 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
       })
       .fail((xhr) => {
         console.error("❌ Comment deletion failed:", xhr.responseJSON?.message);
+      });
+  };
+
+  const startCommentEdit = (postId, comment) => {
+    setEditingComment({ postId, commentId: comment._id });
+    setEditCommentText(comment.text || '');
+    setError('');
+    setMessage('');
+  };
+
+  const cancelCommentEdit = () => {
+    setEditingComment({ postId: null, commentId: null });
+    setEditCommentText('');
+  };
+
+  const handleUpdateComment = (postId, commentId) => {
+    if (!editCommentText.trim()) {
+      setError('Comment content cannot be empty.');
+      return;
+    }
+
+    if (!currentUserId) {
+      setError('You must be logged in to edit a comment.');
+      return;
+    }
+
+    api.updateComment(postId, commentId, editCommentText.trim())
+      .done((response) => {
+        setMessage('Comment updated successfully.');
+        setEditingComment({ postId: null, commentId: null });
+        setEditCommentText('');
+        setPosts(prevPosts => prevPosts.map(p => {
+          if (p._id === postId) {
+            return { ...p, comments: response.comments || [] };
+          }
+          return p;
+        }));
+
+        if (socket) {
+          socket.emit('send_post_comment_update', { postId, comments: response.comments || [] });
+        }
+      })
+      .fail((xhr) => {
+        setError(xhr.responseJSON?.message || 'Comment update failed.');
       });
   };
 
@@ -337,7 +384,7 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                   <div className="post-author">@{authorObject.username || 'Unknown Player'}</div>
                   <div className="post-meta">{post.teamTag || 'Team Feed'} · {createdAt}</div>
                 </div>
-                {isOwner && (
+                {(isOwner || isAdminUser) && (
                   <div className="post-card-controls">
                     <button className="control-button edit" onClick={() => startEdit(post)}>
                       {editMode === post._id ? 'Editing' : 'Edit'}
@@ -438,6 +485,8 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                     {post.comments && post.comments.map((comment, idx) => {
                       const commentAuthorId = comment.author?._id || comment.author || '';
                       const isCommentOwner = String(commentAuthorId) === String(currentUserId);
+                      const canManageComment = isCommentOwner || isAdminUser;
+                      const isEditingThisComment = editingComment.postId === post._id && editingComment.commentId === comment._id;
 
                       return (
                         <div key={comment._id || idx} style={{ 
@@ -448,21 +497,50 @@ const PostFeed = ({ currentUser: initialUser, socket }) => {
                             <strong style={{ color: '#FDB927' }}>@{comment.username}</strong>
                             <span style={{ color: '#bbb', fontSize: '0.75rem', marginLeft: '8px' }}>
                               {comment.createdAt ? new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {comment.updatedAt ? ' · edited' : ''}
                             </span>
-                            <p style={{ margin: '4px 0 0 0', color: '#e0e0e0' }}>{comment.text}</p>
+                            {isEditingThisComment ? (
+                              <>
+                                <textarea
+                                  className="post-feed-textarea edit"
+                                  value={editCommentText}
+                                  onChange={(e) => setEditCommentText(e.target.value)}
+                                  rows={3}
+                                  style={{ marginTop: '8px' }}
+                                />
+                                <div className="post-feed-actions post-card-edit-actions" style={{ marginTop: '8px' }}>
+                                  <button className="post-feed-button primary" onClick={() => handleUpdateComment(post._id, comment._id)}>
+                                    Save
+                                  </button>
+                                  <button className="post-feed-button secondary" onClick={cancelCommentEdit}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <p style={{ margin: '4px 0 0 0', color: '#e0e0e0' }}>{comment.text}</p>
+                            )}
                           </div>
 
-                          {/* 🗑️ Trash action handle */}
-                          {isCommentOwner && comment._id && (
-                            <button
-                              onClick={() => handleDeleteComment(post._id, comment._id)}
-                              style={{ background: 'transparent', color: '#666', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '0 4px', transition: 'color 0.2s' }}
-                              onMouseEnter={(e) => e.target.style.color = '#ce1141'}
-                              onMouseLeave={(e) => e.target.style.color = '#666'}
-                              title="Delete comment"
-                            >
-                              &times;
-                            </button>
+                          {canManageComment && comment._id && !isEditingThisComment && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                              <button
+                                onClick={() => startCommentEdit(post._id, comment)}
+                                style={{ background: 'transparent', color: '#FDB927', border: 'none', fontSize: '0.8rem', cursor: 'pointer', padding: '0 4px' }}
+                                title="Edit comment"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteComment(post._id, comment._id)}
+                                style={{ background: 'transparent', color: '#666', border: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '0 4px', transition: 'color 0.2s' }}
+                                onMouseEnter={(e) => e.target.style.color = '#ce1141'}
+                                onMouseLeave={(e) => e.target.style.color = '#666'}
+                                title="Delete comment"
+                              >
+                                &times;
+                              </button>
+                            </div>
                           )}
                         </div>
                       );

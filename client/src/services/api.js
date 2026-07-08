@@ -167,6 +167,20 @@ const api = {
             },
         });
     },
+    // Update comment on a post
+    updateComment: function (postId, commentId, text) {
+        const token = localStorage.getItem('token');
+        return $.ajax({
+            url: `${API_URL}/posts/${postId}/comment/${commentId}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ text }),
+            headers: {
+                Authorization: `Bearer ${token || ''}`,
+            },
+        });
+    },
     // Delete comment from a post
     deleteComment: function (postId, commentId) {
         const token = localStorage.getItem('token');

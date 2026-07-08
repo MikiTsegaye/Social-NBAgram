@@ -12,6 +12,7 @@ router.get('/posts/search', authMiddleware, postController.searchPosts);
 router.delete('/posts/:id', authMiddleware, postController.deletePost);
 router.put('/posts/:id', authMiddleware, postController.updatePost);
 router.post('/posts/:id/comment', authMiddleware, postController.addComment);
+router.put('/posts/:postId/comment/:commentId', authMiddleware, postController.updateComment);
 router.delete('/posts/:postId/comment/:commentId', authMiddleware, postController.deleteComment);
 
 module.exports = router;
